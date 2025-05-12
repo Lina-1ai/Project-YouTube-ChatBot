@@ -9,8 +9,8 @@ asttokens
 attrs
 beautifulsoup4
 blinker
-cachetools==5.5.2
-certifi==2025.1.31
+cachetools
+certifi
 cffi
 chardet
 charset-normalizer
@@ -40,6 +40,7 @@ google-api-core
 google-auth
 google-cloud-speech
 googleapis-common-protos
+googletrans
 gradio
 gradio_client
 greenlet
