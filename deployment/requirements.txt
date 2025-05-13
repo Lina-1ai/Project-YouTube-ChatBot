@@ -35,6 +35,6 @@ yt-dlp
 openai-whisper
 whisper
 transformers
-tornado==5.0
+tornado
 torch
 
