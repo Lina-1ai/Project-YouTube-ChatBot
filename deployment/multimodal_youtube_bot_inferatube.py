@@ -53,7 +53,6 @@ from langchain.llms import OpenAI
 from langchain.agents import AgentType
 from langchain.vectorstores import FAISS
 from transformers import pipeline
-import pyaudio
 from google.cloud import speech
 from dotenv import load_dotenv
 
