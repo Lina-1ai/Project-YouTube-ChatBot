@@ -10,6 +10,9 @@ Users can:
 - 📑 Get text or audio responses
 - 🧠 Take quizzes or generate summaries
 ---
+## ✨ Project Presentation
+ [Download Project Presentation](https://docs.google.com/presentation/d/1FrKcuqxVKZNMAbtsKAXvQ5JZHzWaUjgK/edit?usp=sharing&ouid=103884519830050993917&rtpof=true&sd=true)
+---
 
 ## 🔄 System Flow
 1. The user enters a YouTube video URL  
@@ -52,15 +55,15 @@ cd <repository_directory>
 ### Step 2: Install Dependencies
 Install the required dependencies listed in requirements.txt:
 ```bash
-pip install -r requirements.txt
+pip install -r requirments.txt
 ```
 ### Step 3: Download the file 
-Download the file Multimodal_YouTube_Bot_InferaTube.py and place it inside your project directory
+Download the file Multimodel_YouTube_ChatBot.py and place it inside your project directory
 
 ### Step 4: Run the Application
 Run the Streamlit application using the following command:
 ```bash
-streamlit run app.py
+streamlit run youtube_chatbot_streamlit.py
 ```
 ---
 
@@ -74,8 +77,5 @@ Answer: The "technological gaze" is defined by Elise Hu as an algorithmically dr
 ```
 ---
 
-![🔗]()
-🚀 Try it out (locally or on Streamlit Cloud).
+🚀 Try it out (locally on Streamlit).
 Upload a video URL, ask your question, and receive spoken or written answers — instantly!
-
-
