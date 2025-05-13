@@ -37,4 +37,6 @@ whisper
 transformers
 tornado
 torch
+pyaudio
+
 
