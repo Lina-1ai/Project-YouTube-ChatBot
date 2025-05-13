@@ -31,3 +31,4 @@ langsmith==0.3.38
 marshmallow==3.26.1
 edge-tts==7.0.2
 aiohttp==3.10.11
+yt-dlp
