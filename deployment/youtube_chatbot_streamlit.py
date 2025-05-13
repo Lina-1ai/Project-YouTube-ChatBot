@@ -6,12 +6,11 @@ import pinecone
 import yt_dlp
 import whisper
 from urllib.parse import urlparse, parse_qs
-from langchain.vectorstores import Pinecone
+from langchain_pinecone import Pinecone, PineconeVectorStore
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain.memory import ConversationBufferMemory
 from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.chains import RetrievalQA
-from langchain.vectorstores import Pinecone as PineconeVectorStore
 from langchain.prompts import PromptTemplate
 from langchain_community.chat_models import ChatOpenAI
 from langchain.agents import initialize_agent, Tool, AgentType
@@ -19,11 +18,12 @@ from transformers import pipeline
 import json
 import re
 import sqlite3
-import datetime
+from datetime import datetime
 from dotenv import load_dotenv
 import asyncio
 
-from multimodal_youtube_bot_inferatube import (
+
+from multimodal_youtube_bot import (
     extract_video_id,
     recognize_google_cloud,
     transcribe_audio_with_timestamps,
@@ -32,7 +32,7 @@ from multimodal_youtube_bot_inferatube import (
     answer_question_tool,
     store_transcript_in_pinecone,
     clean_json_like_string
-) 
+)
 
 def load_api_keys():
     load_dotenv()
@@ -46,7 +46,6 @@ def load_api_keys():
     os.environ["OPENAI_API_KEY"] = openai_api_key
     os.environ["PINECONE_API_KEY"] = pinecone_api_key
     return True
-
 def initialize_database():
     """Initialize SQLite database for storing video information"""
     conn = sqlite3.connect('youtube_videos_chats.db')
@@ -112,9 +111,9 @@ def check_video_in_database(video_id):
 
 def save_video_to_database(video_id, title, url, chunks_count):
     """Save processed video information to database"""
-    conn = sqlite3.connect('youtube_videos_chats.db')
+    conn = sqlite3.connect('youtube_videos_chats.db')  # Fixed database name
     c = conn.cursor()
-    processed_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    processed_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     c.execute("""
     INSERT OR REPLACE INTO videos (video_id, title, url, processed_date, transcript_chunks)
@@ -129,7 +128,7 @@ def create_new_chat(video_id, chat_name=None):
     """Create a new chat session for a video"""
     conn = sqlite3.connect('youtube_videos_chats.db')  # Fixed database name
     c = conn.cursor()
-    created_date = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    created_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     if not chat_name:
         chat_name = f"Chat {created_date}"
@@ -153,23 +152,23 @@ def get_chats_for_video(video_id):
     conn.close()
     return chats
 
-import json
-
-def save_chat_message(chat_id, role, content , chunks):
+def save_chat_message(chat_id, role, content, chunks=None, tool=None):
     """Save a chat message to the database"""
-    conn = sqlite3.connect('youtube_videos.db')
+    conn = sqlite3.connect('youtube_videos_chats.db')
     c = conn.cursor()
-    timestamp = datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
+    if chunks is not None and not isinstance(chunks, str):
+        chunks = json.dumps(chunks)
+    if tool is not None and not isinstance(tool, str):
+        tool = json.dumps(tool)
     c.execute("""
-        INSERT INTO chat_messages (chat_id, role, content, timestamp, chunks)
+        INSERT INTO chat_messages (chat_id, role, content, timestamp, chunks, tool)
         VALUES (?, ?, ?, ?, ?, ?)
-        """, (chat_id, role, content, timestamp, chunks))
-    
+    """, (chat_id, role, content, timestamp, chunks, tool))
     conn.commit()
     conn.close()
     return True
-
 
 def get_chat_messages(chat_id):
     """Get all messages for a specific chat"""
@@ -247,11 +246,6 @@ def delete_chat(chat_id):
     conn.commit()
     conn.close()
     return True
-
-from langchain_pinecone import PineconeVectorStore
-from langchain_openai import OpenAIEmbeddings
-import pinecone
-
 def initialize_pinecone():
     pc = pinecone.Pinecone(api_key=os.environ["PINECONE_API_KEY"])
     index_name = 'youtube-video-index00'
@@ -266,15 +260,11 @@ def initialize_pinecone():
                 region='us-east-1'
             )
         )
+    
+    index = pc.Index(index_name)
     embeddings = OpenAIEmbeddings(model="text-embedding-ada-002")
-    vectordb = PineconeVectorStore.from_existing_index(
-        index_name=index_name,
-        embedding=embeddings,
-        text_key="text"
-    )
-    return vectordb, embeddings
-
-
+    vectordb = PineconeVectorStore(index=index, embedding=embeddings, text_key="text")
+    return index, vectordb, embeddings
 
 def store_transcript_in_pinecone(transcript, video_title, video_id, index, embeddings):
     all_chunks = []
@@ -503,7 +493,8 @@ def main():
 
     if st.session_state.api_keys_loaded and st.session_state.vectordb is None:
         try:
-            vectordb, embeddings = initialize_pinecone()
+            index, vectordb, embeddings = initialize_pinecone()
+            st.session_state.index = index
             st.session_state.embeddings = embeddings
         except Exception as e:
             st.error(f"Error initializing Pinecone: {e}")
@@ -523,6 +514,7 @@ def main():
             else:
                 vectordb, video_title, video_id = process_youtube_video(
                     youtube_url, 
+                    st.session_state.index,
                     st.session_state.embeddings
                 )
                 if vectordb and video_title and video_id:
@@ -562,7 +554,7 @@ def main():
                     
                     # Load video data from Pinecone
                     vectordb = PineconeVectorStore(
-                        index_name="youtube-video-index000",
+                        index=st.session_state.index, 
                         embedding=st.session_state.embeddings, 
                         text_key="text"
                     )
@@ -611,7 +603,7 @@ def main():
             if st.button("🆕 New Chat Session", use_container_width=True):
                 chat_id = create_new_chat(
                     st.session_state.video_id, 
-                    f"Chat {datetime.datetime.now().strftime('%Y-%m-%d %H:%M')}"
+                    f"Chat {datetime.now().strftime('%Y-%m-%d %H:%M')}"
                 )
                 st.session_state.current_chat_id = chat_id
                 st.session_state.chat_history = []
