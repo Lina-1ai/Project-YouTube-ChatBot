@@ -38,5 +38,6 @@ transformers
 tornado
 torch
 pyaudio
+sounddevice
 
 
