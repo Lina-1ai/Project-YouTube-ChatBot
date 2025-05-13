@@ -317,6 +317,11 @@ def process_youtube_video(youtube_url):
 # 
 
 # %%
+import os
+import sounddevice as sd
+import numpy as np
+import google.cloud.speech as speech
+
 # Speech to Text using Google Cloud
 def recognize_google_cloud():
     # Set up Google Cloud credentials
@@ -326,36 +331,17 @@ def recognize_google_cloud():
     client = speech.SpeechClient()
 
     # Define the audio sampling rate (16kHz is common for speech recognition)
-    # Define the chunk size (how many samples to read at a time) — here it's 100ms
-
     RATE = 16000
-    CHUNK = int(RATE / 10)
-
-    # Initialize PyAudio to capture audio input from the microphone
-    audio_interface = pyaudio.PyAudio()
-
-    # Open an audio stream with specified parameters: mono channel, 16-bit format, 16kHz sample rate
-    stream = audio_interface.open(format=pyaudio.paInt16,
-                                   channels=1,
-                                   rate=RATE,
-                                   input=True,
-                                   frames_per_buffer=CHUNK)
+    DURATION = 5  # seconds
 
     print("Speak now...")
 
-    # Collect audio frames for 5 seconds
-    audio_frames = []
-    for _ in range(0, int(RATE / CHUNK * 5)):  # total of 5 seconds
-        data = stream.read(CHUNK)  # Read a chunk of audio data
-        audio_frames.append(data)  # Append it to the list
+    # تسجيل الصوت باستخدام sounddevice
+    recording = sd.rec(int(DURATION * RATE), samplerate=RATE, channels=1, dtype='int16')
+    sd.wait()  # انتظر حتى ينتهي التسجيل
 
-    # Stop and close the audio stream after recording
-    stream.stop_stream()
-    stream.close()
-    audio_interface.terminate()
-
-    # Combine all recorded audio frames into a single byte string
-    audio_data = b''.join(audio_frames)
+    # تحويل التسجيل إلى bytes كما يتوقعه Google Speech-to-Text
+    audio_data = recording.tobytes()
 
     # Create a RecognitionAudio object using the recorded audio data
     audio = speech.RecognitionAudio(content=audio_data)
@@ -378,6 +364,7 @@ def recognize_google_cloud():
     transcript = response.results[0].alternatives[0].transcript
     print("Transcript:", transcript)
     return transcript
+
 
 
 
