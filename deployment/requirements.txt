@@ -34,3 +34,7 @@ aiohttp==3.10.11
 yt-dlp
 openai-whisper
 whisper
+transformers
+tornado==5.0
+torch
+
